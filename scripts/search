@@ -1,0 +1,148 @@
+#!/usr/bin/perl
+
+use Term::ANSIColor qw(:constants);
+use Getopt::Long;
+use strict;
+
+
+$Term::ANSIColor::AUTORESET = 1;
+
+my $string;
+my $refine;
+my $nostrings;
+my $args = '';
+my $grepargs = '';
+my $lastfile;
+my $type;
+my $open;
+my $realpath;
+my $help;
+
+GetOptions('string=s', \$string, 
+	   'refine=s', \$refine, 
+		   'help' => \$help,
+		   'ns' => \$nostrings,
+		   'type=s' => \$type,
+	           'open' => \$open,
+		   'realpath' => \$realpath,
+		   'grepargs=s', \$grepargs,
+		   'findargs=s', \$args);
+
+if($help || !$string){
+  printhelp();
+  exit();
+}
+my @output;
+my $counter = 0;
+my $none = '\s';
+if($type && $type eq "name" && $open && $refine){
+   `find . -follow $args -name '$string' |grep $refine |exec emacs`;
+}
+if($type && $type eq "name"){
+   @output =  `find . -follow $args -name '$string'`;
+foreach(@output)
+  {
+    $|=1;
+    if(/(.*)($string)(.*)/){
+	  printit($1, $none,$2,$3);
+	}
+  }
+
+}else{
+   @output =  `find . $args -type f -exec grep -n $grepargs '$string' {} + 2>/dev/null`;
+foreach(@output)
+  {
+    $|=1;
+    if(/^(.*[.awobs|.cpp|.h|.txt|.msg|.mail|.mpa|.htt|.conf|.mi|.m|.pm])[:|\-](\d{1,})[:|\-](.*)/){
+      if($nostrings){
+		if(!/^(.*runtime-strings-awobs-files.*)/){
+		  $lastfile = printit($1,$2,$3,$lastfile);
+		}
+      }else{
+		$lastfile = printit($1,$2,$3,$lastfile);
+	  }
+	  if(($args) && ($args =~ /\-C/)){
+		$counter++;
+		if($counter == 5){
+		  print("\n");
+		  $counter = 0;
+		}
+	  }
+	}
+  }
+}
+
+sub printit{
+
+my($file,$row,$match,$lastfile) = @_;
+
+if($lastfile ne $file){
+	  print "\n";
+      print MAGENTA substr($file, 0, 200);
+	  print  ":\n" if (!$type);
+	}
+      print CYAN "line ". $row . ":" if(!$type);
+
+      if($match =~ /$string/){
+		print substr($`, 0, 200);
+		print BOLD RED $&;
+		print substr($', 0, 200);
+		print "\n";
+      }else{
+		print substr($match, 0, 200);
+		print "\n";
+  }
+
+return $file;
+}
+
+sub printhelp{
+
+print <<HELP;
+
+location: /workplace/scripts
+
+usage: search
+         [--string=searchstring]
+         [--ns BOOL]
+         [--type=name]
+         [--realpath BOOL]
+         [--findargs=find arguments]
+         [--grepargs=grep arguments]
+         [--help BOOL]
+
++ required arguments:
+  --string
++ optional arguments:
+         --ns BOOL: ignore strings awobs files
+         --type= name search for filename
+         --realpath BOOL: display realpath, only works with type=name
+         --findargs= find arguments
+         --grepargs= grep arguments
+         --help BOOL: display this message
+
+This script takes a search string and colorizes the output,
+especially helpful if you get a lot of results, highlights your searchstring!
+
+For best results use PuTTY on windows or any term on linux.
+
+Sample usage:
+
+  tschau\@tschau-laptop:~> search -grepargs=-C -string 'Amazon'
+  tschau\@tschau-laptop:~> search  -type=name -findargs=-follow -realpath -string 'bratwurst.mi'
+
+for most efficiency, make yourself some aliases:
+  f='/workplace/scripts/search  -type=name -findargs=-follow -realpath -string'
+  s='/workplace/scripts/search -grepargs=-C -string'
+
+
+HELP
+
+}
+
+
+
+
+
+
+

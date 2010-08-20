@@ -1,0 +1,18 @@
+#!/usr/bin/perl -pi
+
+# dumb down smart text (curly quotes, etc)
+
+s/\r\n$/\n/;    # real computers use LF
+
+s/\227/--/g;	# found at microprose.com
+s/\321/--/g; 
+		
+s/\223//g;	# bold on  <- from microprose
+s/\224//g;	# bold off
+
+s/\222/\'/g;	# microsoft mail. argh.
+s/\324/\'/g;
+s/\325/\'/g;
+
+s/\322/"/g; 
+s/\323/"/g; 
